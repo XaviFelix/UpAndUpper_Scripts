@@ -13,12 +13,14 @@ public class PlayerController : MonoBehaviour
     public float walkSpeed = 5f;
     public float turningSpeed = 8f;
     public float gravity = 9.81f;
+    public float sprintSpeed = 10f;
+    public float jumpHeight = 2f;
 
- 
     // Player's Input
     private float moveInput;
     private float turnInput;
-
+    private bool isSprinting;
+    private bool isJumping;
     // Start is called before the first frame update
     void Start()
     {
@@ -36,12 +38,14 @@ public class PlayerController : MonoBehaviour
     {
         moveInput = Input.GetAxis("Vertical");
         turnInput = Input.GetAxis("Horizontal");
+        isSprinting = Input.GetKey(KeyCode.LeftShift); 
+        isJumping = Input.GetKeyDown(KeyCode.Space) && controller.isGrounded; 
     }
 
     private float GravityForce()
     {
         // if player is grounded, it continues to remain grounded even when encountering uneven surfaces
-        if(controller.isGrounded)
+        if(controller.isGrounded && !isJumping)
         {
             verticalVelocity = -1f;
         }
@@ -53,22 +57,37 @@ public class PlayerController : MonoBehaviour
 
         return verticalVelocity;
     }
+
+
+    //calc vertical force accounting for jumping
+    private float CalcVerticalForce(){
+        
+        if(isJumping){
+            verticalVelocity = Mathf.Sqrt(jumpHeight * 2f * gravity); 
+        }
+        else {
+            verticalVelocity = GravityForce();
+        }
+        return verticalVelocity;
+    }
+    
     private void Walking()
     {
         // Calculate movement input
         Vector3 move = new Vector3(turnInput, 0, moveInput);
         move = transform.TransformDirection(move);
 
-        //Add a conditinal here for sprinting when pressing 'shift':
-        // Default walk speed
-        move *= walkSpeed;
+        //adjust speed whether sprinting or walking
+        move *= isSprinting ? sprintSpeed : walkSpeed;
 
-        // Applies gravity
-        move.y = GravityForce();
+        // Applies vertical force
+        move.y = CalcVerticalForce();
 
         // Moves character
         controller.Move(move * Time.deltaTime); 
     }
+
+
 
     // Camera look direciton logic.
     // Turns character based on where the camera is facing
