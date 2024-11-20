@@ -1,9 +1,9 @@
-﻿/***************************************************************
+/***************************************************************
 *file: Projectile.cs
 *author: Marie Philavong
 *class: CS 4700 - Game Development
 *assignment: Program 4
-*date last modified: 11/19/24
+*date last modified: 11/20/24
 *
 *purpose: This script handles the behavior of projectiles, 
 *         including collision detection, applying a push force 
@@ -17,8 +17,19 @@ using UnityEngine;
 
 public class Projectile : MonoBehaviour
 {
-    // public float pushForce = 10f; // force applied to push the player
+    // function: Start
+    // purpose: called before the first frame update
+    void Start()
+    {
 
+    }
+
+    // function: Update
+    // purpose: called once per frame
+    void Update()
+    {
+
+    }
 
     // function: OnCollisionEnter
     // purpose: detects collision with the player and applies a push force in the direction of the 
