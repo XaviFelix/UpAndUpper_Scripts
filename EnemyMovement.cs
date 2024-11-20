@@ -1,50 +1,56 @@
+/***************************************************************
+*file: EnemyMovement.cs
+*author: Darlyn Villanueva & Marie Philavong
+*class: CS 4700 - Game Development
+*assignment: Program 4
+*date last modified: 11/19/24
+*
+*purpose: This program controls the enemy's movement behavior. 
+*         The enemy moves toward the player when within a 
+*         certain range.
+*         
+****************************************************************/
 
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-//EnemyMovement: where the enemy is moving vertically
+public class EnemyMovement : MonoBehaviour
+{
+    private Transform player;
 
-public class EnemyMovement : MonoBehaviour{
+    public float moveSpeed = 5f;  // movement speed when moving towards the player
+    public float moveRange = 10f; // range where the enemy starts moving towards the player
 
-    //range of the movement of enemy
-    public float rangeX= 5f;
+    // function: Start
+    // purpose: called before the first frame update; initializes the reference to the player's Transform
+    void Start()
+    {
+        player = GameObject.FindGameObjectWithTag("Player").transform; // find the player
+    }
 
-    //speed of enemy
-    public float speed= 10f;
+    // function: Update
+    // purpose: called once per frame; moves the enemy towards the player if within the move range
+    void Update()
+    {
+        if(player != null)
+        {
+            // detect distance to player
+            float distanceToPlayer = Vector3.Distance(transform.position, player.position);
 
-    //initial direction
-    public float direction= 1f;
+            // move only if player is within the specified range
+            if(distanceToPlayer <= moveRange)
+            {
+                MoveTowardsPlayer();
+            }
+        }
+    }
 
-   // keep initial position of enemy
-   public Vector3 initialPosition;
-
-   void Start(){
-
-   // initialPosition location in Y
-   initialPosition= transform.position;
-
-   }
-
-   void Update(){
-
-    float movementX= direction * speed* Time.deltaTime;
-
-    //new postion
-    float newX= transform.position.x + movementX;
-
-    //check if limit of area is passed or not
-    if(Mathf.Abs(newX - initialPosition.x) > rangeX){
-
-        //move in other direction
-        direction *= -1;
-
-    }else{
-        
-        //move the enemy forward
-        transform.position= new Vector3(newX, transform.position.y, transform.position.z);
-
-   }
-
-}
+    // function: MoveTowardsPlayer
+    // purpose: moves the enemy towards the player's position
+    void MoveTowardsPlayer()
+    {
+        Vector3 directionToPlayer = (player.position - transform.position).normalized;
+        transform.position += new Vector3(directionToPlayer.x, 0, directionToPlayer.z) * moveSpeed * Time.deltaTime;
+    }
 }
