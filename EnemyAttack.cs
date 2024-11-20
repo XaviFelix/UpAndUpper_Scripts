@@ -1,113 +1,98 @@
+/***************************************************************
+*file: EnemyAttack.cs
+*author: Darlyn Villanueva & Marie Philavong
+*class: CS 4700 - Game Development
+*assignment: Program 4
+*date last modified: 11/19/24
+*
+*purpose: This program controls the enemy's ability to detect 
+*         the player, shoot projectiles when the player is within 
+*         range, and push the player back when nearby.
+*         
+****************************************************************/
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class EnemyAttack : MonoBehaviour
 {
+    private float lastAttackTime;           // tracks time of last projectile shot
 
-    public Animator animator;   //if enemy has animations for attacks
-    public Transform player;  
-    public float rangeDetection= 5f; //range which the enemy detects the "player"
-    public float rangeAttack= 2f; //range which the enemy attacks the "player"
-    public float cooldown= 1f; // the pause in enemy attacks
-    public float timeBtwnAttacks= 0.5f; // time in between sequence of attacks
+    public Transform player;            
+    public GameObject projectilePrefab; 
+    public Transform shootPoint;        
 
-    //checks to make sure attacks are triggered or not spamming
-    public float lastAttackTime=0f;
-    public bool isAttacking= false;
+    public float pushRange = 10f;           // range where enemy moves and pushes the player
+    public float shootRange = 20f;          // range where enemy shoots projectiles at the player
+    public float pushForce = 5f;            // force applied to push the player
+    public float projectileSpeed = 10f;     // speed of the projectile
+    public float cooldown = 1f;             // cooldown time between projectile shots
 
-    //check which attack sequence enemy is currently in
-    public int attackIndex=0;
-    public string[] attackSequence = {"Attack1","Attack2"}; //attack sequence of the enemy
+    // function: Start
+    // purpose: called before the first frame update
+    void Start()
+    {
 
-    void Start(){
-
-        animator= GetComponent<Animator>();
     }
 
-
-    // Update is called once per frame
+    // function: Update
+    // purpose: called once per frame; determines if the player is within push or shooting range
+    //          and executes the corresponding behavior
     void Update()
     {
-        //detects the distance between enemy and player
-        if(player != null){
-        float distanceToPlayer= Vector3.Distance(transform.position, player.position);
+        if(player != null)
+        {
+            // detect distance to player
+            float distanceToPlayer = Vector3.Distance(transform.position, player.position);
 
-        if(distanceToPlayer <= rangeDetection){
-
-            //if player is near the detection range, enemy will start its attack sequence/chain
-            if(distanceToPlayer <= rangeAttack && Time.time >= lastAttackTime+ cooldown){
-
-                StartCoroutine(AttackSequence());
-            }else{
-               // MoveToPlayer(); //if player is not in range of detection, move the enemy towards the player
+            if(distanceToPlayer <= pushRange)
+            {
+                PushPlayer(); // pushes the player if within push range
+            }
+            else if(distanceToPlayer <= shootRange && Time.time >= lastAttackTime + cooldown)
+            {
+                ShootProjectile(); // shoots a projectile at the player if within shooting range
+                lastAttackTime = Time.time;
             }
         }
-        }
     }
 
+    // function: ShootProjectile
+    // purpose: instantiates and launches a projectile towards the player
+    private void ShootProjectile()
+    {
+        // create the projectile at the shoot point
+        GameObject projectile = Instantiate(projectilePrefab, shootPoint.position, Quaternion.identity);
+        Rigidbody rb = projectile.GetComponent<Rigidbody>();
 
-/*public void MoveToPlayer(){
+        // calculate direction to player
+        Vector3 direction = (player.position - shootPoint.position).normalized;
 
-    Vector3 direction = (player.position - transform.position).normalized;
-    transform.Translate(direction * Time.deltaTime, Space.World);
-}
-*/
-
-
-//calls to start the enemy attack sequence
- IEnumerator AttackSequence(){
-
-    isAttacking= true;
-
-    //will perform the sequence of attacks to the player
-    while(attackIndex < attackSequence.Length){
-
-        string currentAttack= attackSequence[attackIndex]; 
-
-        switch(currentAttack){
-
-            case "Attack1":
-            PerformAttack(1);
-            break;
-
-            case "Attack2":
-            PerformAttack(2);
-            break;
-
-            default:
-            Debug.LogWarning("attack error");
-            break;
+        // apply velocity to the projectile
+        if (rb != null)
+        {
+            rb.velocity = direction * projectileSpeed;
         }
 
-        yield return new WaitForSeconds(timeBtwnAttacks);
-        attackIndex++;
-
+        Debug.Log("Enemy is shooting projectile at player.");
     }
 
-    //reset enemy attack sequence
-    attackIndex=0;
-    isAttacking=false;
-    lastAttackTime=Time.time;
-}
+    // function: PushPlayer
+    // purpose: applies a force to push the player off the edge when within push range
+    private void PushPlayer()
+    {
+        Rigidbody playerRb = player.GetComponent<Rigidbody>();
 
- void PerformAttack(int sequenceNum){
+        if(playerRb != null)
+        {
+            // calculate the push direction
+            Vector3 pushDirection = (player.position - transform.position).normalized;
 
-    //performs the animation for the specific sequence number
-    switch(sequenceNum){
+            // apply force to push the player
+            playerRb.AddForce(pushDirection * pushForce, ForceMode.Force);
 
-        case 1:
-        animator.SetTrigger("Attack1");
-        break;
-
-        case 2:
-        animator.SetTrigger("Attack2");
-        break;
-
-        default:
-        Debug.LogWarning("attack unknown");
-        break;
+            Debug.Log("Enemy is pushing the player.");
+        }
     }
-}
-
 }
