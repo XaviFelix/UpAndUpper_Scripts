@@ -29,6 +29,8 @@ public class EnemyAttack : MonoBehaviour
     public float projectileSpeed = 10f;     // speed of the projectile
     public float cooldown = 1f;             // cooldown time between projectile shots
 
+    public Transform playerChest;           // reference to player's chest
+
     // function: Start
     // purpose: called before the first frame update
     void Start()
@@ -66,8 +68,11 @@ public class EnemyAttack : MonoBehaviour
         GameObject projectile = Instantiate(projectilePrefab, shootPoint.position, Quaternion.identity);
         Rigidbody rb = projectile.GetComponent<Rigidbody>();
 
-        // calculate direction to player
-        Vector3 direction = (player.position - shootPoint.position).normalized;
+        // target the player's chest 
+        Vector3 target = playerChest != null ? playerChest.position : player.position;
+
+        // calculate the direction to the target point
+        Vector3 direction = (target - shootPoint.position).normalized;
 
         // apply velocity to the projectile
         if (rb != null)
@@ -75,9 +80,10 @@ public class EnemyAttack : MonoBehaviour
             rb.velocity = direction * projectileSpeed;
         }
 
-        Debug.Log("Enemy is shooting projectile at player.");
+        Debug.Log("Enemy is shooting projectile at player's chest.");
     }
 
+    // TODO: Player does not use a rigidbody, it uses a character controller component. Finish later
     // function: PushPlayer
     // purpose: applies a force to push the player off the edge when within push range
     private void PushPlayer()
