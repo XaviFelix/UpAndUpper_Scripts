@@ -1,12 +1,15 @@
 /***************************************************************
-*file: EnemyAttack.cs
-*author: Xavier Felix & Darren Banhthai
+*file: PlayerController.cs
+*author: Xavier Felix, Darren Banhthai, & Marie Philavong
 *class: CS 4700 - Game Development
 *assignment: Program 4
-*date last modified: 11/23/24
+*date last modified: 11/27/24
 *
-*purpose: To control player behavior such as walking, running,
-*         and jumping based on player input and environmental cues
+*purpose: This program controls the player's movement, including 
+*         walking, sprinting, jumping, and backwards movement. It 
+*         also handles player animations for walking, running, 
+*         jumping, and waking up. The player's input is processed 
+*         using WASD keys, and movement is influenced by gravity.
 *         
 ****************************************************************/
 
@@ -16,153 +19,162 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    // References
+    // references
     private CharacterController controller;
-    public new Transform camera;
+    private Animator playerAnimator;
+    public Transform camera;
     private float verticalVelocity;
 
     [Header("Movement Settings")]
-    public float walkSpeed = 5f;
-    public float turningSpeed = 8f;
-    public float gravity = 9.81f;
-    public float sprintSpeed = 10f;
-    public float jumpHeight = 2f;
+    public float walkSpeed = 5f;         // speed while walking
+    public float turningSpeed = 8f;      // speed of turning
+    public float gravity = 9.81f;        // gravity force applied to player
+    public float sprintSpeed = 10f;      // speed while sprinting
+    public float jumpHeight = 2f;        // height the player can jump
 
-    // Player's Input
-    private float moveInput;
-    private float turnInput;
-    private bool isSprinting;
-    private bool isJumping;
+    // player's input
+    private float moveInput;             // vertical movement input
+    private float turnInput;             // horizontal movement input
+    private bool isSprinting;            // indicates if the player is sprinting
+    private bool isJumping;              // indicates if the player is jumping
+    private bool isMovingBackwards;      // indicates if the player is moving backwards
 
-    // Push data
-    private bool isBeingPushed = false;
-    private Vector3 pushDirection;
-    private Vector3 pushVelocity = Vector3.zero;
+    // pushback data
+    private bool isBeingPushed = false;  // indicates if the player is being pushed
+    private Vector3 pushDirection;       // direction of the push
+    private Vector3 pushVelocity = Vector3.zero;  // velocity applied during push
 
-    // Start is called before the first frame update
+    // function: Start
+    // purpose: called before the first frame update; initializes the controller and animator references
     void Start()
     {
         controller = GetComponent<CharacterController>();
-        isBeingPushed = false;
-        pushVelocity = Vector3.zero;
+        playerAnimator = GetComponent<Animator>();
     }
 
-    // Update is called once per frame
+    // function: Update
+    // purpose: called once per frame; gets user input and handles movement logic
     void Update()
     {
         GetUserInput();
         Movement();
 
-        // pushback when moving
-        if (isBeingPushed)
+        // pushback behavior
+        if(isBeingPushed)
         {
             controller.Move(pushVelocity * Time.deltaTime);
         }
     }
 
     // function: GetUserInput
-    // purpose: record WASD, shift and space from user input
+    // purpose: retrieves input from the user for movement, sprinting, and jumping
     private void GetUserInput()
     {
-        moveInput = Input.GetAxis("Vertical");
-        turnInput = Input.GetAxis("Horizontal");
-        isSprinting = Input.GetKey(KeyCode.LeftShift);
-        isJumping = Input.GetKeyDown(KeyCode.Space) && controller.isGrounded;
-    }
-
-    // function: GravityForce
-    // purpose: Used to determine player's vertical velocity 
-    //          dependent on jumping and grounded status.
-    //          returns vertical velocity calculation (effects of gravity)
-    private float GravityForce()
-    {
-        // if player is grounded, it continues to remain grounded even when encountering uneven surfaces
-        if (controller.isGrounded && !isJumping)
-        {
-            verticalVelocity = -1f;
-        }
-        // if player is not grounded then gravity takes over
-        else
-        {
-            verticalVelocity -= gravity * Time.deltaTime;
-        }
-
-        return verticalVelocity;
+        moveInput = Input.GetAxis("Vertical");           // get vertical movement input
+        turnInput = Input.GetAxis("Horizontal");         // get horizontal movement input
+        isSprinting = Input.GetKey(KeyCode.LeftShift);   // sprint when left shift key is pressed
+        isJumping = Input.GetKeyDown(KeyCode.Space) && controller.isGrounded;  // jump only if grounded
+        isMovingBackwards = Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow);  // check if the player is moving backwards
     }
 
     // function: CalcVerticalForce
-    // purpose: Used to determine player's vertical velocity 
-    //          dependent on user's input via spacebar (jump button)
-    //          returns vertical velocity calculation
+    // purpose: calculates the vertical velocity for gravity and jumping
     private float CalcVerticalForce()
     {
-        // calculate vertical jump velocity  
-        if (isJumping)
+        if(isJumping)
         {
-            verticalVelocity = Mathf.Sqrt(jumpHeight * 2f * gravity); 
+            // calculate jump force
+            verticalVelocity = Mathf.Sqrt(jumpHeight * 2f * gravity);
+            playerAnimator.SetTrigger("IsJumping");
         }
-        // calculate vertical velocity due to effects of only gravity
         else
         {
-            verticalVelocity = GravityForce();
+            // apply gravity if not jumping and grounded
+            if(!controller.isGrounded)
+            {
+                verticalVelocity -= gravity * Time.deltaTime;
+            }
+            else
+            {
+                verticalVelocity = -1f;
+            }
         }
         return verticalVelocity;
     }
 
-    // function: Walking
-    // purpose: Allows player to walk based on user's input (WASD)
-    private void Walking()
+    // function: PlayerMovementAnimation
+    // purpose: handles player movement animations based on the movement state (walking, running, jumping, etc.)
+    private void PlayerMovementAnimation()
     {
-        // calculate movement input
         Vector3 move = new Vector3(turnInput, 0, moveInput);
         move = transform.TransformDirection(move);
-
-        // adjust speed whether sprinting or walking
-        move *= isSprinting ? sprintSpeed : walkSpeed;
-
-        // applies vertical force
-        move.y = CalcVerticalForce();
-
-        // moves character
+        move *= isSprinting ? sprintSpeed : walkSpeed;  // apply sprint speed if sprinting, otherwise walk speed
+        move.y = CalcVerticalForce();                   // apply vertical movement (gravity or jump)
         controller.Move(move * Time.deltaTime);
+
+        // check if the player is moving and update the Animator
+        bool isMoving = moveInput != 0 || turnInput != 0;
+        playerAnimator.SetBool("IsWalking", isMoving);
+
+        // play running animation only when sprinting and moving
+        playerAnimator.SetBool("IsRunning", isSprinting && isMoving);
+
+        // walking and running backwards animations
+        if(isMovingBackwards)
+        {
+            if(isSprinting)
+            {
+                playerAnimator.SetBool("IsRunningBackwards", true);   // play running backwards animation
+                playerAnimator.SetBool("IsWalkingBackwards", false);  // stop walking backwards animation
+            }
+            else
+            {
+                playerAnimator.SetBool("IsWalkingBackwards", true);   // play walking backwards animation
+                playerAnimator.SetBool("IsRunningBackwards", false);  // stop running backwards animation
+            }
+        }
+        else
+        {
+            playerAnimator.SetBool("IsWalkingBackwards", false);  // stop walking backwards animation
+            playerAnimator.SetBool("IsRunningBackwards", false);  // stop running backwards animation
+        }
+
+        // stop jump animation when grounded
+        if(controller.isGrounded && !isJumping)
+        {
+            playerAnimator.ResetTrigger("IsJumping");  // reset jump animation when grounded
+        }
     }
 
-
     // function: PlayerLookDirection
-    // purpose: Turns character based on where the camera is facing
+    // purpose: adjusts the player's rotation to face the direction of movement
     private void PlayerLookDirection()
     {
-        // Turns player in the direction that the camera is facing
-        if (Mathf.Abs(turnInput) > 0 || Mathf.Abs(moveInput) > 0)
+        if(Mathf.Abs(turnInput) > 0 || Mathf.Abs(moveInput) > 0)
         {
-            // Gets camera look direction
-            Vector3 currentlookdirection = camera.forward;
-            // Ignores y-axis direction
-            currentlookdirection.y = 0;
-
-            // Calculate player rotation based on turningSpeed
-            Quaternion playerRotation = Quaternion.LookRotation(currentlookdirection);
-            transform.rotation = Quaternion.Slerp(transform.rotation, playerRotation, Time.deltaTime * turningSpeed);
+            Vector3 currentLookDirection = camera.forward; // get the camera's forward direction
+            currentLookDirection.y = 0;                    // keep the rotation on the horizontal plane
+            Quaternion playerRotation = Quaternion.LookRotation(currentLookDirection);  // calculate rotation
+            transform.rotation = Quaternion.Slerp(transform.rotation, playerRotation, Time.deltaTime * turningSpeed);  // apply rotation smoothly
         }
     }
 
     // function: Movement
-    // purpose: Calls both Walking and PlayerLookDireciton methods
+    // purpose: handles all movement-related logic, including input, animation, and character rotation
     private void Movement()
     {
-        Walking();
-        PlayerLookDirection();
+        PlayerMovementAnimation();  // player animation based on user input
+        PlayerLookDirection();      // adjusts player rotation to move in the correct direction
     }
 
     // function: ApplyPushback
-    // purpose: Called within projectile's (prefab) onCollision method 
-    //          upon activation, player's push direction is determined
+    // purpose: called to apply a pushback force to the player
     public void ApplyPushback(Vector3 direction, float force)
     {
         isBeingPushed = true;
         pushDirection = direction.normalized;
 
-        // Calculate push velocity based on direction and force
+        // calculate push velocity based on direction and force
         pushVelocity = pushDirection * force;
 
         // reset velocity after a while
@@ -170,8 +182,7 @@ public class PlayerController : MonoBehaviour
     }
 
     // function: ResetPushback
-    // purpose: Gradually stops the push effect after 0.5 secs
-    //          then resets the push velocity
+    // purpose: gradually stops the push effect after 0.5 seconds and resets the push velocity
     private IEnumerator ResetPushback()
     {
         yield return new WaitForSeconds(0.5f);
